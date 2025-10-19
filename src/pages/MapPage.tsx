@@ -1,56 +1,36 @@
 ﻿import type { FC } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Page } from '@/components/Page.tsx';
-import { Section } from '@telegram-apps/telegram-ui';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { Button, Section } from '@telegram-apps/telegram-ui';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { UserIcon } from '@/features/map/utils/icons';
 
 import { MAP_CENTER, DEFAULT_ZOOM, MIN_FETCH_ZOOM } from '@/features/map/constants';
 import { POILayer } from '@/features/map/components/POILayer';
+import { useTelegramLocation } from '@/features/telegram/useTelegramLocation';
 import styles from './MapPage.module.css';
+
+const CenterOnUser: FC<{ pos?: [number, number] }> = ({ pos }) => {
+    const map = useMap();
+    const didCenterRef = useRef(false);
+    useEffect(() => {
+        if (!pos || didCenterRef.current) return;
+        const targetZoom = Math.max(map.getZoom(), 13);
+        map.setView(pos, targetZoom, { animate: true });
+        didCenterRef.current = true;
+    }, [map, pos]);
+    return null;
+};
 
 // ---------- Page ----------
 export const MapPage: FC = () => {
-    const [userPos, setUserPos] = useState<[number, number] | undefined>(undefined);
-    const [locLoading, setLocLoading] = useState(false);
-    const [locError, setLocError] = useState<string | undefined>(undefined);
+    const { supported: tgSupported, loading: locLoading, error: locError, coords, openSettings } = useTelegramLocation();
+    const userPos = coords ? [coords.lat, coords.lng] as [number, number] : undefined;
 
     const [fetching, setFetching] = useState(false);
     const [fetchError, setFetchError] = useState<string | undefined>(undefined);
     const [poiCount, setPoiCount] = useState(0);
-
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setLocLoading(true);
-            setLocError(undefined);
-            try {
-                const tg = (window as any)?.Telegram?.WebApp;
-                if (tg && typeof tg.requestLocation === 'function') {
-                    const loc = await tg.requestLocation();
-                    if (!cancelled && typeof loc?.latitude === 'number' && typeof loc?.longitude === 'number') {
-                        setUserPos([loc.latitude, loc.longitude]);
-                    }
-                } else if (navigator.geolocation) {
-                    await new Promise<void>((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(
-                            (pos) => { if (!cancelled) setUserPos([pos.coords.latitude, pos.coords.longitude]); resolve(); },
-                            (err) => reject(new Error(err.message)),
-                            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-                        );
-                    });
-                } else {
-                    throw new Error('Location is not supported on this device.');
-                }
-            } catch (e: any) {
-                if (!cancelled) setLocError(e?.message || 'Failed to get location');
-            } finally {
-                if (!cancelled) setLocLoading(false);
-            }
-        })();
-        return () => { cancelled = true; };
-    }, []);
 
     return (
         <Page>
@@ -65,6 +45,8 @@ export const MapPage: FC = () => {
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
+
+                        <CenterOnUser pos={userPos} />
 
                         {userPos && (
                             <Marker position={userPos} icon={UserIcon}>
@@ -84,13 +66,22 @@ export const MapPage: FC = () => {
                 </div>
 
                 <Section>
-                    {locLoading && <div>Getting location…</div>}
-                    {!locLoading && !userPos && (
-                        <div className={styles.hint}>
-                            We need your location to display nearby objects. Allow access to location in Telegram or browser.
-                        </div>
-                    )}
-                    {locError && <div className={styles.error}>Location error: {locError}</div>}
+                    <div aria-live="polite">
+                        {locLoading && <div>Getting location…</div>}
+                        {!locLoading && !userPos && (
+                            <div className={styles.hint}>
+                                We need your location to display nearby objects. Allow access to location in Telegram or browser.
+                            </div>
+                        )}
+                        {locError && <div className={styles.error}>Location error: {locError}</div>}
+                        {tgSupported && (
+                            <div style={{ marginTop: 8 }}>
+                                <Button size="s" mode="bezeled" disabled={locLoading} onClick={() => openSettings()}>
+                                    Location settings
+                                </Button>
+                            </div>
+                        )}
+                    </div>
 
                     {fetchError && <div className={styles.error}>Data error: {fetchError}</div>}
                     {!fetchError && fetching && <div>Loading OSM data… (zoom in if no results)</div>}
