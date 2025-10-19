@@ -5,7 +5,7 @@ import { InitDataPage } from '@/pages/InitDataPage.tsx';
 import { LaunchParamsPage } from '@/pages/LaunchParamsPage.tsx';
 import { ThemeParamsPage } from '@/pages/ThemeParamsPage.tsx';
 import { TONConnectPage } from '@/pages/TONConnectPage/TONConnectPage';
-import { SloveniaMapPage } from '@/pages/SloveniaMapPage';
+import { MapPage } from '@/pages/MapPage';
 
 interface Route {
   path: string;
@@ -19,7 +19,7 @@ export const routes: Route[] = [
   { path: '/init-data', Component: InitDataPage, title: 'Init Data' },
   { path: '/theme-params', Component: ThemeParamsPage, title: 'Theme Params' },
   { path: '/launch-params', Component: LaunchParamsPage, title: 'Launch Params' },
-  { path: '/slovenia-map', Component: SloveniaMapPage, title: 'Slovenia Map' },
+  { path: '/map', Component: MapPage, title: 'Map' },
   {
     path: '/ton-connect',
     Component: TONConnectPage,

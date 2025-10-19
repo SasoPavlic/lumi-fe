@@ -1,0 +1,5 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Attach debugger" type="JavascriptDebugType" uri="http://localhost:5173/lumi-fe/">
+    <method v="2" />
+  </configuration>
+</component>

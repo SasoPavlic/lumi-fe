@@ -46,9 +46,9 @@ export const IndexPage: FC = () => {
                 </Section>
 
                 <Section header="Maps">
-                    <Link to="/slovenia-map">
-                        <Cell subtitle="OpenStreetMap with Ljubljana and Maribor markers">
-                            Slovenia Map
+                    <Link to="/map">
+                        <Cell subtitle="Show your location and nearby churches (30 km) on OpenStreetMap">
+                            Map
                         </Cell>
                     </Link>
                 </Section>
