@@ -4,6 +4,7 @@ import type { CSSProperties, FC } from 'react';
 
 import { Link } from '@/components/Link/Link.tsx';
 import { Page } from '@/components/Page.tsx';
+import { PlacesExplorer } from '@/features/places/components/PlacesExplorer.tsx';
 import { useTelegramLocation } from '@/features/telegram/useTelegramLocation.ts';
 import tonSvg from './ton.svg';
 
@@ -26,6 +27,11 @@ const usernameStyles: CSSProperties = {
 
 const fullNameStyles: CSSProperties = {
   textAlign: 'center',
+};
+
+const explorerWrapperStyles: CSSProperties = {
+  width: '100%',
+  marginTop: '24px',
 };
 
 export const IndexPage: FC = () => {
@@ -87,6 +93,10 @@ export const IndexPage: FC = () => {
             </Link>
           </Section>
         </List>
+
+        <div style={explorerWrapperStyles}>
+          <PlacesExplorer/>
+        </div>
       </div>
     </Page>
   );
