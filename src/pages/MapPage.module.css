@@ -1,6 +1,0 @@
-﻿.container { padding: 12px; }
-.mapWrapper { height: 66vh; width: 100%; }
-.mapCanvas { height: 100%; width: 100%; border-radius: 12px; overflow: hidden; }
-.hint { color: var(--tgui--hint_color); }
-.error { color: var(--tgui--destructive_text_color); }
-.status {}

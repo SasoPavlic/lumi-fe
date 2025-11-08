@@ -1,58 +1,74 @@
-import { Section, Cell, Image, List } from '@telegram-apps/telegram-ui';
+import { Avatar, Cell, Image, List, Section, Text, Title } from '@telegram-apps/telegram-ui';
+import { initDataState as _initDataState, useSignal } from '@telegram-apps/sdk-react';
 import type { FC } from 'react';
 
 import { Link } from '@/components/Link/Link.tsx';
 import { Page } from '@/components/Page.tsx';
+import { useTelegramLocation } from '@/features/telegram/useTelegramLocation.ts';
 
+import styles from './IndexPage.module.css';
 import tonSvg from './ton.svg';
 
 export const IndexPage: FC = () => {
-    return (
-        <Page back={false}>
-            <List>
-                <Section
-                    header="Features"
-                    footer="You can use these pages to learn more about features, provided by Telegram Mini Apps and other useful projects"
-                >
-                    <Link to="/ton-connect">
-                        <Cell
-                            before={<Image src={tonSvg} style={{ backgroundColor: '#007AFF' }} />}
-                            subtitle="Connect your TON wallet"
-                        >
-                            TON Connect
-                        </Cell>
-                    </Link>
-                </Section>
+  const initData = useSignal(_initDataState);
+  const user = initData?.user;
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+  const username = user?.username ? `@${user.username}` : undefined;
 
-                <Section
-                    header="Application Launch Data"
-                    footer="These pages help developer to learn more about current launch information"
-                >
-                    <Link to="/init-data">
-                        <Cell subtitle="User data, chat information, technical data">
-                            Init Data
-                        </Cell>
-                    </Link>
-                    <Link to="/launch-params">
-                        <Cell subtitle="Platform identifier, Mini Apps version, etc.">
-                            Launch Parameters
-                        </Cell>
-                    </Link>
-                    <Link to="/theme-params">
-                        <Cell subtitle="Telegram application palette information">
-                            Theme Parameters
-                        </Cell>
-                    </Link>
-                </Section>
+  const {
+    supported,
+    loading,
+    error,
+    coords,
+  } = useTelegramLocation();
 
-                <Section header="Maps">
-                    <Link to="/map">
-                        <Cell subtitle="Show your location and nearby churches (30 km) on OpenStreetMap">
-                            Map
-                        </Cell>
-                    </Link>
-                </Section>
-            </List>
-        </Page>
-    );
+  const locationSubtitle = supported
+    ? coords
+      ? 'Last update from Telegram LocationManager'
+      : 'Waiting for permission from Telegram'
+    : 'Telegram LocationManager is not supported here';
+
+  const locationValue = coords
+    ? `Lat ${coords.lat.toFixed(5)}, Lng ${coords.lng.toFixed(5)}`
+    : (error || (loading ? 'Requesting location…' : 'Location is not available yet'));
+
+  return (
+    <Page back={false}>
+      <div className={styles.root}>
+        <Avatar
+          src={user?.photo_url}
+          alt={fullName || 'Telegram user avatar'}
+          width={96}
+          height={96}
+        />
+        <Title level="2" className={styles.fullName}>
+          {fullName || 'Telegram user'}
+        </Title>
+        <Text weight="2" className={styles.username}>
+          {username || 'Username is not provided'}
+        </Text>
+
+        <List className={styles.list}>
+          <Section header="Current location">
+            <Cell subtitle={locationSubtitle}>
+              {locationValue}
+            </Cell>
+          </Section>
+        </List>
+
+        <List className={styles.list}>
+          <Section header="Tools">
+            <Link to="/ton-connect">
+              <Cell
+                before={<Image src={tonSvg} style={{ backgroundColor: '#007AFF' }}/>}
+                subtitle="Connect your TON wallet"
+              >
+                TON Connect
+              </Cell>
+            </Link>
+          </Section>
+        </List>
+      </div>
+    </Page>
+  );
 };
