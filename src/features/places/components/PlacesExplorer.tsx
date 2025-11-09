@@ -149,24 +149,22 @@ export const PlacesExplorer: FC = () => {
         <span className={styles.radiusValue}>{radiusKm} km</span>
       </div>
 
-      <div className={styles.buttonRow}>
-        <button
-          type="button"
-          onClick={handleFindPlaces}
-          disabled={isBusy}
-          className={styles.button}
-        >
-          {buttonLabel}
-        </button>
-        <div
-          className={[
-            styles.status,
-            status.tone === 'success' ? styles.statusSuccess : '',
-            status.tone === 'error' ? styles.statusError : '',
-          ].join(' ')}
-        >
-          {status.text}
-        </div>
+      <button
+        type="button"
+        onClick={handleFindPlaces}
+        disabled={isBusy}
+        className={styles.button}
+      >
+        {buttonLabel}
+      </button>
+      <div
+        className={[
+          styles.status,
+          status.tone === 'success' ? styles.statusSuccess : '',
+          status.tone === 'error' ? styles.statusError : '',
+        ].join(' ')}
+      >
+        {status.text}
       </div>
 
       <div className={styles.mapSection}>

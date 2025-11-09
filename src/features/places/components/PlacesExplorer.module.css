@@ -55,13 +55,6 @@
   color: inherit;
 }
 
-.buttonRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
 .button {
   border: none;
   color: #fff;
@@ -94,6 +87,9 @@
   background: rgba(99, 102, 241, 0.08);
   color: #312e81;
   word-break: break-word;
+  line-height: 1.35;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .statusSuccess {
@@ -177,11 +173,6 @@
   .sliderRow {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .buttonRow {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .button {
