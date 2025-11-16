@@ -37,7 +37,7 @@ export default defineConfig({
     proxy: {
       // Forward API calls to the backend during local development.
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
     },

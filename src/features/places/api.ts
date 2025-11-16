@@ -21,7 +21,7 @@ function resolveApiUrl(searchParams: URLSearchParams): string {
 
   const origin = typeof window !== 'undefined'
     ? window.location.origin
-    : 'http://localhost:3000';
+    : 'http://localhost:4000';
   const url = new URL(API_PATH, origin);
   url.search = searchParams.toString();
   return url.toString();

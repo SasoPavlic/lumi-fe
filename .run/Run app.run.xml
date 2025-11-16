@@ -5,7 +5,8 @@
     <scripts>
       <script value="dev" />
     </scripts>
-    <node-interpreter value="project" />
+    <node-interpreter value="wsl://Ubuntu@/home/spartan/.nvm/versions/node/v22.14.0/bin/node" />
+    <package-manager value="\home\spartan\.nvm\versions\node\v22.14.0\bin\npm" />
     <envs />
     <method v="2" />
   </configuration>

@@ -2,7 +2,7 @@
 
 ARG NODE_VERSION=22.14.0
 ARG NGINX_VERSION=1.27-alpine
-ARG VITE_API_BASE_URL=http://localhost:3000
+ARG VITE_API_BASE_URL=https://lumi-be.vratko.si
 ARG VITE_BASE_PATH=/
 
 FROM node:${NODE_VERSION} AS build

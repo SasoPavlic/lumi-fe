@@ -104,6 +104,33 @@ production mode unless you fully understand its implications.
 > from loading. To address this issue, refer to
 > [this guide](https://docs.telegram-mini-apps.com/platform/getting-app-link#remote).
 
+## API Configuration
+
+The frontend talks to the backend through the `VITE_API_BASE_URL` environment
+variable (see `src/features/places/api.ts`). The default `.env` file keeps this
+value pointed at `http://localhost:4000` for local API development, while the
+new `.env.production` file pins it to the live deployment
+`https://lumi-be.vratko.si` for builds and previews.
+
+### Using the production API locally
+
+When you need the dev server to call the production backend, override the env
+variable only for that process:
+
+```bash
+VITE_API_BASE_URL=https://lumi-be.vratko.si npm run dev
+```
+
+On Windows PowerShell, use:
+
+```powershell
+($env:VITE_API_BASE_URL = 'https://lumi-be.vratko.si'); npm run dev
+```
+
+Alternatively, create a temporary `.env.local` with that value (it overrides the
+base `.env`) and remove it afterwards, or run `npm run build && npm run preview`
+to serve the production bundle—which already embeds the production API URL.
+
 ## Deploy
 
 This boilerplate uses GitHub Pages as the way to host the application
