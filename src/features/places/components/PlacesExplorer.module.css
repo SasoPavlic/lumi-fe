@@ -102,6 +102,30 @@
   color: #991b1b;
 }
 
+.apiInfo {
+  margin: -6px 0 0;
+  font-size: 0.85rem;
+  color: var(--tgui--text-secondary, rgba(15, 23, 42, 0.7));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.apiInfoValue {
+  font-family: 'JetBrains Mono', Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  background: rgba(15, 23, 42, 0.06);
+  padding: 2px 8px;
+  border-radius: 8px;
+  word-break: break-all;
+}
+
+.apiInfoLabel {
+  font-weight: 600;
+  color: inherit;
+}
+
 .mapSection,
 .summary {
   display: flex;

@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import { fetchClosestPoi } from '@/features/places/api.ts';
+import { fetchClosestPoi, getApiBaseUrl } from '@/features/places/api.ts';
 import { DEFAULT_RADIUS_KM, MAX_RADIUS_KM, MIN_RADIUS_KM, getCategoryColor } from '@/features/places/constants.ts';
 import type { PlacesOfWorshipResponse, UserLocation } from '@/features/places/types.ts';
 
@@ -35,6 +35,7 @@ export const PlacesExplorer: FC = () => {
   const [isLocating, setIsLocating] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
   const isBusy = isLocating || isFetching;
 
@@ -166,6 +167,10 @@ export const PlacesExplorer: FC = () => {
       >
         {status.text}
       </div>
+      <p className={styles.apiInfo}>
+        <span className={styles.apiInfoLabel}>API target:</span>
+        <span className={styles.apiInfoValue}>{apiBaseUrl}</span>
+      </p>
 
       <div className={styles.mapSection}>
         <MapView response={result} userLocation={userLocation}/>

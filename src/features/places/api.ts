@@ -5,24 +5,26 @@ import type {
 } from './types.ts';
 
 const API_PATH = '/api/closest-poi';
+const FALLBACK_ORIGIN = 'http://localhost:4000';
 
-function resolveApiUrl(searchParams: URLSearchParams): string {
+export function getApiBaseUrl(): string {
   const configuredBase = import.meta.env.VITE_API_BASE_URL?.trim();
-  const normalizedPath = API_PATH.startsWith('/') ? API_PATH.slice(1) : API_PATH;
-
   if (configuredBase) {
-    const base = configuredBase.endsWith('/')
-      ? configuredBase
-      : `${configuredBase}/`;
-    const url = new URL(normalizedPath, base);
-    url.search = searchParams.toString();
-    return url.toString();
+    return configuredBase.replace(/\/+$/, '');
   }
 
-  const origin = typeof window !== 'undefined'
-    ? window.location.origin
-    : 'http://localhost:4000';
-  const url = new URL(API_PATH, origin);
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return FALLBACK_ORIGIN;
+}
+
+function resolveApiUrl(searchParams: URLSearchParams): string {
+  const normalizedPath = API_PATH.startsWith('/') ? API_PATH.slice(1) : API_PATH;
+  const base = getApiBaseUrl();
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const url = new URL(normalizedPath, normalizedBase);
   url.search = searchParams.toString();
   return url.toString();
 }
@@ -36,7 +38,15 @@ export async function fetchClosestPoi(
     radiusKm: String(radiusKm),
   });
 
-  const res = await fetch(resolveApiUrl(searchParams), { signal });
+  const endpoint = resolveApiUrl(searchParams);
+  let res: Response;
+
+  try {
+    res = await fetch(endpoint, { signal });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown network error.';
+    throw new Error(`Unable to reach the Places API at ${getApiBaseUrl()}. ${message}`);
+  }
 
   if (!res.ok) {
     let message = 'Unable to retrieve nearby places of worship.';
@@ -48,7 +58,7 @@ export async function fetchClosestPoi(
     } catch {
       // Ignore JSON parse errors to keep the default message.
     }
-    throw new Error(message);
+    throw new Error(`${message} (API: ${getApiBaseUrl()}, HTTP ${res.status})`);
   }
 
   return res.json() as Promise<PlacesOfWorshipResponse>;
