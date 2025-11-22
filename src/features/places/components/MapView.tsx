@@ -134,7 +134,7 @@ export const MapView: FC<MapViewProps> = ({
         <MapContainer
           center={[userLocation.lat, userLocation.lon]}
           zoom={10}
-          scrollWheelZoom={false}
+          scrollWheelZoom
           className={styles.map}
         >
           <TileLayer
@@ -207,14 +207,6 @@ export const MapView: FC<MapViewProps> = ({
 
         <div className={styles.overlay}>
           <div className={styles.centerMarker}/>
-          <div className={styles.centerBadge}>
-            <div className={styles.centerLabel}>Map center</div>
-            <div className={styles.centerValue}>
-              {centerCoords
-                ? `Lat ${centerCoords.lat.toFixed(5)}, Lon ${centerCoords.lon.toFixed(5)}`
-                : '—'}
-            </div>
-          </div>
         </div>
       </div>
 
