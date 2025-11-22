@@ -133,6 +133,43 @@
   gap: 12px;
 }
 
+.locationInfo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.locationLabel {
+  font-size: 0.85rem;
+  color: var(--tgui--text-secondary, rgba(15, 23, 42, 0.7));
+}
+
+.locationValue {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tgui--text-primary, #0f172a);
+}
+
+.locationToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--tgui--text-primary, #0f172a);
+  cursor: pointer;
+}
+
+.locationToggle input {
+  width: 18px;
+  height: 18px;
+}
+
 .summaryHeader {
   font-weight: 600;
   margin: 0;

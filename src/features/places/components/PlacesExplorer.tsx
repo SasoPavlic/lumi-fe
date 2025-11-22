@@ -31,6 +31,8 @@ export const PlacesExplorer: FC = () => {
   const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM);
   const [status, setStatus] = useState<StatusState>(INITIAL_STATUS);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [mapCenter, setMapCenter] = useState<UserLocation | null>(null);
+  const [useMapCenter, setUseMapCenter] = useState(false);
   const [result, setResult] = useState<PlacesOfWorshipResponse | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -38,6 +40,14 @@ export const PlacesExplorer: FC = () => {
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
   const isBusy = isLocating || isFetching;
+  const updateMapCenter = useCallback((coords: UserLocation) => {
+    setMapCenter((prev) => {
+      if (prev && Math.abs(prev.lat - coords.lat) < 1e-9 && Math.abs(prev.lon - coords.lon) < 1e-9) {
+        return prev;
+      }
+      return coords;
+    });
+  }, []);
 
   useEffect(() => () => {
     abortRef.current?.abort();
@@ -73,13 +83,21 @@ export const PlacesExplorer: FC = () => {
   const handleFindPlaces = useCallback(async () => {
     abortRef.current?.abort();
 
-    setStatus({ tone: 'info', text: 'Requesting your location…' });
-    setIsLocating(true);
+    const usingMapCenter = useMapCenter && !!mapCenter;
+    setStatus({
+      tone: 'info',
+      text: usingMapCenter ? 'Using map center as origin…' : 'Requesting your location…',
+    });
+    setIsLocating(!usingMapCenter);
     setIsFetching(false);
 
     try {
-      const location = await requestLocation();
+      const location = usingMapCenter && mapCenter
+        ? mapCenter
+        : await requestLocation();
+
       setUserLocation(location);
+      setMapCenter((prev) => prev ?? location);
       setIsLocating(false);
       setIsFetching(true);
       setStatus({ tone: 'info', text: 'Searching for nearby places of worship…' });
@@ -112,7 +130,7 @@ export const PlacesExplorer: FC = () => {
       setIsFetching(false);
       abortRef.current = null;
     }
-  }, [radiusKm, requestLocation]);
+  }, [radiusKm, requestLocation, useMapCenter, mapCenter]);
 
   const buttonLabel = useMemo(() => {
     if (isLocating) return 'Requesting location…';
@@ -173,7 +191,30 @@ export const PlacesExplorer: FC = () => {
       </p>
 
       <div className={styles.mapSection}>
-        <MapView response={result} userLocation={userLocation}/>
+        <MapView
+          response={result}
+          userLocation={userLocation}
+          onCenterChange={updateMapCenter}
+        />
+        <div className={styles.locationInfo}>
+          <div>
+            <div className={styles.locationLabel}>Map center</div>
+            <div className={styles.locationValue}>
+              {mapCenter
+                ? `Lat ${mapCenter.lat.toFixed(5)}, Lon ${mapCenter.lon.toFixed(5)}`
+                : 'Pan the map to pick a point'}
+            </div>
+          </div>
+          <label className={styles.locationToggle}>
+            <input
+              type="checkbox"
+              checked={useMapCenter}
+              onChange={(event) => setUseMapCenter(event.target.checked)}
+              disabled={!mapCenter}
+            />
+            <span>Use map center instead of GPS</span>
+          </label>
+        </div>
       </div>
 
       {result && (

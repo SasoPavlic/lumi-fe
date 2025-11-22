@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Circle,
   CircleMarker,
@@ -7,6 +7,7 @@ import {
   Popup,
   TileLayer,
   useMap,
+  useMapEvents,
 } from 'react-leaflet';
 import { latLngBounds, type LatLngExpression } from 'leaflet';
 
@@ -22,9 +23,15 @@ import styles from './MapView.module.css';
 interface MapViewProps {
   response: PlacesOfWorshipResponse | null;
   userLocation: UserLocation | null;
+  onCenterChange?: (coords: UserLocation) => void;
 }
 
 const EARTH_RADIUS_METERS = 6_371_000;
+const EPSILON = 1e-6;
+
+function coordsEqual(a: UserLocation, b: UserLocation): boolean {
+  return Math.abs(a.lat - b.lat) < EPSILON && Math.abs(a.lon - b.lon) < EPSILON;
+}
 
 const FitBounds: FC<{
   userLocation: UserLocation;
@@ -69,7 +76,50 @@ function formatDistance(distanceMeters: number): string {
   return `${Math.round(distanceMeters)} m`;
 }
 
-export const MapView: FC<MapViewProps> = ({ response, userLocation }) => {
+const CenterTracker: FC<{
+  onChange?: (coords: UserLocation) => void;
+}> = ({ onChange }) => {
+  const lastRef = useRef<UserLocation | null>(null);
+  const map = useMapEvents({
+    moveend() {
+      const center = map.getCenter();
+      const next = { lat: center.lat, lon: center.lng };
+      if (lastRef.current && coordsEqual(lastRef.current, next)) return;
+      lastRef.current = next;
+      onChange?.(next);
+    },
+  });
+
+  useEffect(() => {
+    const center = map.getCenter();
+    const next = { lat: center.lat, lon: center.lng };
+    lastRef.current = next;
+    onChange?.(next);
+  }, [map, onChange]);
+
+  return null;
+};
+
+export const MapView: FC<MapViewProps> = ({
+  response,
+  userLocation,
+  onCenterChange,
+}) => {
+  const items = useMemo(() => response?.items ?? [], [response]);
+  const radiusMeters = response?.radiusMeters;
+  const legendEntries = useMemo(() => response?.categories ?? [], [response]);
+  const [centerCoords, setCenterCoords] = useState<UserLocation | null>(userLocation);
+  const handleCenterChange = useCallback((coords: UserLocation) => {
+    setCenterCoords((prev) => (prev && coordsEqual(prev, coords) ? prev : coords));
+    onCenterChange?.(coords);
+  }, [onCenterChange]);
+
+  useEffect(() => {
+    if (userLocation && !coordsEqual(centerCoords ?? userLocation, userLocation)) {
+      setCenterCoords(userLocation);
+    }
+  }, [userLocation, centerCoords]);
+
   if (!userLocation) {
     return (
       <div className={styles.placeholder}>
@@ -78,81 +128,95 @@ export const MapView: FC<MapViewProps> = ({ response, userLocation }) => {
     );
   }
 
-  const items = useMemo(() => response?.items ?? [], [response]);
-  const radiusMeters = response?.radiusMeters;
-  const legendEntries = useMemo(() => response?.categories ?? [], [response]);
-
   return (
     <div className={styles.wrapper}>
-      <MapContainer
-        center={[userLocation.lat, userLocation.lon]}
-        zoom={10}
-        scrollWheelZoom={false}
-        className={styles.map}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
-        <CircleMarker
+      <div className={styles.mapShell}>
+        <MapContainer
           center={[userLocation.lat, userLocation.lon]}
-          radius={10}
-          pathOptions={{
-            color: '#2563eb',
-            weight: 2,
-            fillColor: '#1d4ed8',
-            fillOpacity: 0.9,
-          }}
+          zoom={10}
+          scrollWheelZoom={false}
+          className={styles.map}
         >
-          <Popup>
-            <strong>You are here</strong>
-          </Popup>
-        </CircleMarker>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
-        {radiusMeters && radiusMeters > 0 && (
-          <Circle
+          <CircleMarker
             center={[userLocation.lat, userLocation.lon]}
-            radius={radiusMeters}
+            radius={10}
             pathOptions={{
               color: '#2563eb',
-              weight: 1.5,
-              dashArray: '6 6',
-              fillOpacity: 0,
+              weight: 2,
+              fillColor: '#1d4ed8',
+              fillOpacity: 0.9,
             }}
-          />
-        )}
+          >
+            <Popup>
+              <strong>Search origin</strong>
+            </Popup>
+          </CircleMarker>
 
-        {items.map((item) => {
-          const color = getCategoryColor(item.category.key, item.category.value);
-          return (
-            <CircleMarker
-              key={item.osmUrl}
-              center={[item.coordinates.latitude, item.coordinates.longitude]}
-              radius={8}
+          {radiusMeters && radiusMeters > 0 && (
+            <Circle
+              center={[userLocation.lat, userLocation.lon]}
+              radius={radiusMeters}
               pathOptions={{
-                color,
-                weight: 2,
-                fillColor: color,
-                fillOpacity: 0.9,
+                color: '#2563eb',
+                weight: 1.5,
+                dashArray: '6 6',
+                fillOpacity: 0,
               }}
-            >
-              <Popup>
-                <strong>{item.name}</strong>
-                <div>{item.category.label}</div>
-                <div>{formatDistance(item.distanceMeters)} away</div>
-                <a href={item.osmUrl} target="_blank" rel="noreferrer">OpenStreetMap</a>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
+            />
+          )}
 
-        <FitBounds
-          userLocation={userLocation}
-          items={items}
-          radiusMeters={radiusMeters}
-        />
-      </MapContainer>
+          {items.map((item) => {
+            const color = getCategoryColor(item.category.key, item.category.value);
+            return (
+              <CircleMarker
+                key={item.osmUrl}
+                center={[item.coordinates.latitude, item.coordinates.longitude]}
+                radius={8}
+                pathOptions={{
+                  color,
+                  weight: 2,
+                  fillColor: color,
+                  fillOpacity: 0.9,
+                }}
+              >
+                <Popup>
+                  <strong>{item.name}</strong>
+                  <div>{item.category.label}</div>
+                  <div>{formatDistance(item.distanceMeters)} away</div>
+                  <a href={item.osmUrl} target="_blank" rel="noreferrer">OpenStreetMap</a>
+                </Popup>
+              </CircleMarker>
+            );
+          })}
+
+          <FitBounds
+            userLocation={userLocation}
+            items={items}
+            radiusMeters={radiusMeters}
+          />
+
+          <CenterTracker
+            onChange={handleCenterChange}
+          />
+        </MapContainer>
+
+        <div className={styles.overlay}>
+          <div className={styles.centerMarker}/>
+          <div className={styles.centerBadge}>
+            <div className={styles.centerLabel}>Map center</div>
+            <div className={styles.centerValue}>
+              {centerCoords
+                ? `Lat ${centerCoords.lat.toFixed(5)}, Lon ${centerCoords.lon.toFixed(5)}`
+                : '—'}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {legendEntries.length > 0 && (
         <div className={styles.legend}>
