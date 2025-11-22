@@ -1,9 +1,8 @@
 import { emitEvent, isTMA, mockTelegramEnv } from '@telegram-apps/sdk-react';
 
-// Automatically mock the Telegram environment when the app is opened outside of Telegram.
-// This lets the same build run both in a regular browser (e.g., GitHub Pages) and inside
-// Telegram. The mock is never applied when Telegram APIs are available.
-(async () => {
+// Ensure the Telegram environment is available. When running outside Telegram (e.g., GitHub Pages),
+// we mock it so the app can boot. When inside Telegram, no mock is applied.
+export const ensureTelegramEnv = (async () => {
   let shouldMock = false;
   try {
     shouldMock = !(await isTMA('complete'));
@@ -12,7 +11,7 @@ import { emitEvent, isTMA, mockTelegramEnv } from '@telegram-apps/sdk-react';
     shouldMock = true;
   }
 
-  if (!shouldMock) return;
+  if (!shouldMock) return 'native';
 
   const themeParams = {
     accent_text_color: '#6ab2f2',
@@ -84,4 +83,6 @@ import { emitEvent, isTMA, mockTelegramEnv } from '@telegram-apps/sdk-react';
   console.info(
     '⚠️ Telegram environment not detected, enabling mocked Telegram APIs so the app can run in the browser. The mock is skipped automatically inside the real Telegram client.',
   );
+
+  return 'mocked';
 })();

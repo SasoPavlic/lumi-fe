@@ -9,15 +9,16 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 import { Root } from '@/components/Root.tsx';
 import { EnvUnsupported } from '@/components/EnvUnsupported.tsx';
 import { init } from '@/init.ts';
+import { ensureTelegramEnv } from '@/mockEnv.ts';
 
 import './index.css';
-
-// Mock the environment in case, we are outside Telegram.
-import './mockEnv.ts';
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
 try {
+  // Ensure that the Telegram environment is ready (or mocked) before reading launch params.
+  await ensureTelegramEnv;
+
   const launchParams = retrieveLaunchParams();
   const { tgWebAppPlatform: platform } = launchParams;
   const debug = (launchParams.tgWebAppStartParam || '').includes('platformer_debug')
