@@ -20,7 +20,7 @@ export interface UseTelegramLocationResult {
 
 export function useTelegramLocation(options?: UseTelegramLocationOptions): UseTelegramLocationResult {
   const { fallbackToBrowser = true, fallbackToWebApp = true, highAccuracy = true } = options || {};
-  const [supported] = useState<boolean>(() => isSupported());
+  const [supported, setSupported] = useState<boolean>(() => isSupported());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -42,6 +42,8 @@ export function useTelegramLocation(options?: UseTelegramLocationOptions): UseTe
               return;
             }
           }
+          // Telegram LM was expected but did not produce data; degrade to fallbacks.
+          setSupported(false);
         }
 
         // 2) Try legacy WebApp.requestLocation
