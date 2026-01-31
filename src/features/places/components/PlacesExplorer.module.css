@@ -158,6 +158,31 @@
   letter-spacing: 0.08em;
 }
 
+.devActions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.devButton {
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.devButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.2);
+}
+
+.devButton:active {
+  transform: scale(0.98);
+}
+
 .locationInfo {
   display: flex;
   flex-wrap: wrap;

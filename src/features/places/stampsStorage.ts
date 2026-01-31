@@ -51,3 +51,11 @@ export function persistStampedIds(ids: Set<string>): void {
   }
 }
 
+export function clearStampedIds(): void {
+  if (!hasStorage()) return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore storage errors for MVP (private mode, quota, etc.).
+  }
+}

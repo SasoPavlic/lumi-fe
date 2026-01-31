@@ -17,6 +17,7 @@ import {
   getStampIdFromPlace,
   loadStampedIds,
   persistStampedIds,
+  clearStampedIds,
 } from '@/features/places/stampsStorage.ts';
 
 import { MapView } from './MapView.tsx';
@@ -86,6 +87,13 @@ export const PlacesExplorer: FC = () => {
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
   const isBusy = isLocating || isFetching;
+  const shouldUseMapCenter = useMapCenter && !!mapCenter;
+  const effectiveLocation = useMemo<UserLocation | null>(() => {
+    if (shouldUseMapCenter && mapCenter) {
+      return mapCenter;
+    }
+    return liveLocation;
+  }, [shouldUseMapCenter, mapCenter, liveLocation]);
   const updateMapCenter = useCallback((coords: UserLocation) => {
     setMapCenter((prev) => {
       if (prev && Math.abs(prev.lat - coords.lat) < 1e-9 && Math.abs(prev.lon - coords.lon) < 1e-9) {
@@ -161,6 +169,11 @@ export const PlacesExplorer: FC = () => {
       return;
     }
 
+    if (shouldUseMapCenter) {
+      setLiveError(null);
+      return;
+    }
+
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setLiveError('Geolocation is not supported in this environment.');
       return;
@@ -184,7 +197,7 @@ export const PlacesExplorer: FC = () => {
       },
     );
     watchIdRef.current = watchId;
-  }, [selectedPlace, stampedIds]);
+  }, [selectedPlace, stampedIds, shouldUseMapCenter]);
 
   const handleFindPlaces = useCallback(async () => {
     abortRef.current?.abort();
@@ -255,14 +268,14 @@ export const PlacesExplorer: FC = () => {
   );
   const isSelectedStamped = selectedStampId ? stampedIds.has(selectedStampId) : false;
   const distanceMeters = useMemo(() => {
-    if (!selectedPlace || !liveLocation) return null;
+    if (!selectedPlace || !effectiveLocation) return null;
     return computeDistanceMeters(
-      liveLocation.lat,
-      liveLocation.lon,
+      effectiveLocation.lat,
+      effectiveLocation.lon,
       selectedPlace.coordinates.latitude,
       selectedPlace.coordinates.longitude,
     );
-  }, [selectedPlace, liveLocation]);
+  }, [selectedPlace, effectiveLocation]);
   const withinRange = distanceMeters !== null && distanceMeters <= CHECKIN_RADIUS_METERS;
   const canStamp = Boolean(selectedPlace && !isSelectedStamped && withinRange && !liveError);
   const distanceProgress = useMemo(() => {
@@ -343,6 +356,12 @@ export const PlacesExplorer: FC = () => {
     setSelectedPlace(place);
   }, []);
 
+  const handleClearStamps = useCallback(() => {
+    if (!window.confirm('Clear all stamped places for this device?')) return;
+    clearStampedIds();
+    setStampedIds(new Set());
+  }, []);
+
   let checkInButtonTitle = 'Select a place';
   let checkInButtonSubtitle = 'Tap a marker on the map';
   let checkInButtonClass = styles.checkInButtonLocked;
@@ -355,11 +374,13 @@ export const PlacesExplorer: FC = () => {
       checkInButtonSubtitle = 'You have collected this place.';
       checkInButtonClass = styles.checkInButtonStamped;
     } else if (liveError) {
-      checkInButtonTitle = 'Enable GPS';
+      checkInButtonTitle = shouldUseMapCenter ? 'Map center not ready' : 'Enable GPS';
       checkInButtonSubtitle = liveError;
     } else if (distanceMeters === null) {
-      checkInButtonTitle = 'Locating…';
-      checkInButtonSubtitle = 'Waiting for GPS signal.';
+      checkInButtonTitle = shouldUseMapCenter ? 'Pick a map center' : 'Locating…';
+      checkInButtonSubtitle = shouldUseMapCenter
+        ? 'Pan the map to set the center.'
+        : 'Waiting for GPS signal.';
     } else if (!withinRange) {
       checkInButtonTitle = 'Move closer';
       distanceLabel = formatDistance(distanceMeters);
@@ -511,6 +532,15 @@ export const PlacesExplorer: FC = () => {
           <span className={styles.apiInfoLabel}>API target:</span>
           <span className={styles.apiInfoValue}>{apiBaseUrl}</span>
         </p>
+        <div className={styles.devActions}>
+          <button
+            type="button"
+            className={styles.devButton}
+            onClick={handleClearStamps}
+          >
+            Clear stamps
+          </button>
+        </div>
         <div className={styles.locationInfo}>
           <div>
             <div className={styles.locationLabel}>Map center</div>
