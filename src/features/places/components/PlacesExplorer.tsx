@@ -8,9 +8,16 @@ import {
   useState,
 } from 'react';
 
+import { hapticFeedbackNotificationOccurred } from '@telegram-apps/sdk';
+
 import { fetchClosestPoi, getApiBaseUrl } from '@/features/places/api.ts';
 import { DEFAULT_RADIUS_KM, MAX_RADIUS_KM, MIN_RADIUS_KM, getCategoryColor } from '@/features/places/constants.ts';
-import type { PlacesOfWorshipResponse, UserLocation } from '@/features/places/types.ts';
+import type { PlacesItem, PlacesOfWorshipResponse, UserLocation } from '@/features/places/types.ts';
+import {
+  getStampIdFromPlace,
+  loadStampedIds,
+  persistStampedIds,
+} from '@/features/places/stampsStorage.ts';
 
 import { MapView } from './MapView.tsx';
 import styles from './PlacesExplorer.module.css';
@@ -27,6 +34,36 @@ const INITIAL_STATUS: StatusState = {
   text: 'Pick a radius and tap “Find places” to load nearby points of worship.',
 };
 
+const CHECKIN_RADIUS_METERS = 15;
+const HOLD_DURATION_MS = 3000;
+
+function computeDistanceMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const earthRadiusMeters = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusMeters * c;
+}
+
+function formatDistance(distanceMeters: number): string {
+  if (!Number.isFinite(distanceMeters)) return '—';
+  if (distanceMeters >= 1000) {
+    return `${(distanceMeters / 1000).toFixed(2)} km`;
+  }
+  return `${Math.round(distanceMeters)} m`;
+}
+
 export const PlacesExplorer: FC = () => {
   const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM);
   const [status, setStatus] = useState<StatusState>(INITIAL_STATUS);
@@ -36,7 +73,16 @@ export const PlacesExplorer: FC = () => {
   const [result, setResult] = useState<PlacesOfWorshipResponse | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [stampedIds, setStampedIds] = useState<Set<string>>(() => loadStampedIds());
+  const [selectedPlace, setSelectedPlace] = useState<PlacesItem | null>(null);
+  const [liveLocation, setLiveLocation] = useState<UserLocation | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [isHolding, setIsHolding] = useState(false);
+  const [holdProgress, setHoldProgress] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const holdRafRef = useRef<number | null>(null);
+  const holdResetRef = useRef<number | null>(null);
+  const watchIdRef = useRef<number | null>(null);
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
   const isBusy = isLocating || isFetching;
@@ -51,7 +97,24 @@ export const PlacesExplorer: FC = () => {
 
   useEffect(() => () => {
     abortRef.current?.abort();
+    if (holdRafRef.current !== null) {
+      cancelAnimationFrame(holdRafRef.current);
+    }
+    if (holdResetRef.current !== null) {
+      window.clearTimeout(holdResetRef.current);
+    }
+    if (
+      watchIdRef.current !== null
+      && typeof navigator !== 'undefined'
+      && navigator.geolocation
+    ) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
   }, []);
+
+  useEffect(() => {
+    persistStampedIds(stampedIds);
+  }, [stampedIds]);
 
   const handleRadiusChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setRadiusKm(Number(event.target.value));
@@ -80,6 +143,49 @@ export const PlacesExplorer: FC = () => {
     });
   }, []);
 
+  useEffect(() => {
+    if (watchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
+    if (!selectedPlace) {
+      setLiveLocation(null);
+      setLiveError(null);
+      return;
+    }
+
+    const selectedId = getStampIdFromPlace(selectedPlace);
+    if (stampedIds.has(selectedId)) {
+      setLiveError(null);
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLiveError('Geolocation is not supported in this environment.');
+      return;
+    }
+
+    setLiveError(null);
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setLiveLocation({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        });
+      },
+      (error) => {
+        setLiveError(error.message || 'Unable to retrieve location.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10_000,
+        maximumAge: 0,
+      },
+    );
+    watchIdRef.current = watchId;
+  }, [selectedPlace, stampedIds]);
+
   const handleFindPlaces = useCallback(async () => {
     abortRef.current?.abort();
 
@@ -97,6 +203,10 @@ export const PlacesExplorer: FC = () => {
         : await requestLocation();
 
       setUserLocation(location);
+      if (!usingMapCenter) {
+        setLiveLocation(location);
+        setLiveError(null);
+      }
       setMapCenter((prev) => prev ?? location);
       setIsLocating(false);
       setIsFetching(true);
@@ -138,7 +248,131 @@ export const PlacesExplorer: FC = () => {
     return 'Find places';
   }, [isLocating, isFetching]);
 
+  const stampedCount = stampedIds.size;
+  const selectedStampId = useMemo(
+    () => (selectedPlace ? getStampIdFromPlace(selectedPlace) : null),
+    [selectedPlace],
+  );
+  const isSelectedStamped = selectedStampId ? stampedIds.has(selectedStampId) : false;
+  const distanceMeters = useMemo(() => {
+    if (!selectedPlace || !liveLocation) return null;
+    return computeDistanceMeters(
+      liveLocation.lat,
+      liveLocation.lon,
+      selectedPlace.coordinates.latitude,
+      selectedPlace.coordinates.longitude,
+    );
+  }, [selectedPlace, liveLocation]);
+  const withinRange = distanceMeters !== null && distanceMeters <= CHECKIN_RADIUS_METERS;
+  const canStamp = Boolean(selectedPlace && !isSelectedStamped && withinRange && !liveError);
+  const distanceProgress = useMemo(() => {
+    if (distanceMeters === null) return 0;
+    const safeDistance = Math.max(distanceMeters, CHECKIN_RADIUS_METERS);
+    return Math.min(1, CHECKIN_RADIUS_METERS / safeDistance);
+  }, [distanceMeters]);
+
+  useEffect(() => {
+    if (!result || !selectedPlace) return;
+    const activeId = getStampIdFromPlace(selectedPlace);
+    const stillVisible = result.items.some((item) => getStampIdFromPlace(item) === activeId);
+    if (!stillVisible) {
+      setSelectedPlace(null);
+    }
+  }, [result, selectedPlace]);
+
+  const cancelHold = useCallback((resetProgress = true) => {
+    if (holdRafRef.current !== null) {
+      cancelAnimationFrame(holdRafRef.current);
+      holdRafRef.current = null;
+    }
+    if (resetProgress) {
+      setHoldProgress(0);
+    }
+    setIsHolding(false);
+  }, []);
+
+  const completeStamp = useCallback(() => {
+    if (!selectedPlace) return;
+    cancelHold(false);
+    const stampId = getStampIdFromPlace(selectedPlace);
+    setStampedIds((prev) => {
+      if (prev.has(stampId)) return prev;
+      const next = new Set(prev);
+      next.add(stampId);
+      return next;
+    });
+    if (hapticFeedbackNotificationOccurred.isAvailable()) {
+      hapticFeedbackNotificationOccurred('success');
+    }
+    setHoldProgress(1);
+    setIsHolding(false);
+    if (holdResetRef.current !== null) {
+      window.clearTimeout(holdResetRef.current);
+    }
+    holdResetRef.current = window.setTimeout(() => setHoldProgress(0), 650);
+  }, [cancelHold, selectedPlace]);
+
+  const startHold = useCallback(() => {
+    if (!canStamp) return;
+    if (holdResetRef.current !== null) {
+      window.clearTimeout(holdResetRef.current);
+      holdResetRef.current = null;
+    }
+    setIsHolding(true);
+    const start = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / HOLD_DURATION_MS);
+      setHoldProgress(progress);
+      if (progress >= 1) {
+        holdRafRef.current = null;
+        completeStamp();
+        return;
+      }
+      holdRafRef.current = requestAnimationFrame(tick);
+    };
+    holdRafRef.current = requestAnimationFrame(tick);
+  }, [canStamp, completeStamp]);
+
+  useEffect(() => {
+    if (!canStamp && isHolding) {
+      cancelHold(true);
+    }
+  }, [canStamp, isHolding, cancelHold]);
+
+  const handleSelectPlace = useCallback((place: PlacesItem) => {
+    setSelectedPlace(place);
+  }, []);
+
   const categories = result?.categories ?? [];
+
+  let checkInButtonTitle = 'Select a place';
+  let checkInButtonSubtitle = 'Tap a marker on the map';
+  let checkInButtonClass = styles.checkInButtonLocked;
+  let showDistanceMeter = false;
+  let distanceLabel: string | null = null;
+
+  if (selectedPlace) {
+    if (isSelectedStamped) {
+      checkInButtonTitle = 'Already stamped';
+      checkInButtonSubtitle = 'You have collected this place.';
+      checkInButtonClass = styles.checkInButtonStamped;
+    } else if (liveError) {
+      checkInButtonTitle = 'Enable GPS';
+      checkInButtonSubtitle = liveError;
+    } else if (distanceMeters === null) {
+      checkInButtonTitle = 'Locating…';
+      checkInButtonSubtitle = 'Waiting for GPS signal.';
+    } else if (!withinRange) {
+      checkInButtonTitle = 'Move closer';
+      distanceLabel = formatDistance(distanceMeters);
+      checkInButtonSubtitle = `Distance: ${distanceLabel}`;
+      showDistanceMeter = true;
+    } else {
+      checkInButtonTitle = 'Hold 3s to stamp';
+      checkInButtonSubtitle = `Within ${CHECKIN_RADIUS_METERS} m`;
+      checkInButtonClass = styles.checkInButtonReady;
+    }
+  }
 
   return (
     <section className={styles.card}>
@@ -194,6 +428,9 @@ export const PlacesExplorer: FC = () => {
         <MapView
           response={result}
           userLocation={userLocation}
+          selectedId={selectedStampId ?? undefined}
+          stampedIds={stampedIds}
+          onSelect={handleSelectPlace}
           onCenterChange={updateMapCenter}
         />
         <div className={styles.locationInfo}>
@@ -215,6 +452,89 @@ export const PlacesExplorer: FC = () => {
             <span>Use map center instead of GPS</span>
           </label>
         </div>
+      </div>
+
+      <div className={styles.checkInCard}>
+        <div className={styles.checkInHeader}>
+          <div>
+            <div className={styles.checkInTitle}>
+              {selectedPlace ? selectedPlace.name : 'Collect a place'}
+            </div>
+            <div className={styles.checkInSubtitle}>
+              {selectedPlace
+                ? selectedPlace.category.label
+                : 'Tap a marker on the map to choose your next stamp.'}
+            </div>
+          </div>
+          <div className={styles.stampCount}>
+            <span className={styles.stampCountValue}>{stampedCount}</span>
+            <span className={styles.stampCountLabel}>stamped</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className={[
+            styles.checkInButton,
+            checkInButtonClass,
+            isHolding ? styles.checkInButtonHolding : '',
+          ].join(' ')}
+          disabled={!canStamp}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            startHold();
+          }}
+          onPointerUp={() => cancelHold(true)}
+          onPointerLeave={() => cancelHold(true)}
+          onPointerCancel={() => cancelHold(true)}
+        >
+          <svg
+            className={[
+              styles.holdRing,
+              isHolding ? styles.holdRingActive : '',
+            ].join(' ')}
+            viewBox="0 0 36 36"
+          >
+            <circle
+              className={styles.holdRingTrack}
+              cx="18"
+              cy="18"
+              r="16"
+              pathLength="100"
+            />
+            <circle
+              className={styles.holdRingFill}
+              cx="18"
+              cy="18"
+              r="16"
+              pathLength="100"
+              strokeDasharray={`${holdProgress * 100} 100`}
+            />
+          </svg>
+
+          <div className={styles.checkInButtonContent}>
+            <div>
+              <div className={styles.checkInButtonTitle}>{checkInButtonTitle}</div>
+              <div className={styles.checkInButtonSubtitle}>{checkInButtonSubtitle}</div>
+            </div>
+            {withinRange && !isSelectedStamped && !liveError && selectedPlace && (
+              <span className={styles.checkInIcon} aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="img" focusable="false">
+                  <path d="M12 2.5l2.3 4.66 5.15.75-3.73 3.63.88 5.13L12 14.9 7.4 16.67l.88-5.13L4.55 7.91l5.15-.75L12 2.5z" />
+                </svg>
+              </span>
+            )}
+          </div>
+
+          {showDistanceMeter && (
+            <div className={styles.distanceMeter}>
+              <div
+                className={styles.distanceMeterFill}
+                style={{ width: `${distanceProgress * 100}%` }}
+              />
+            </div>
+          )}
+        </button>
       </div>
 
       {result && (

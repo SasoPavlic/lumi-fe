@@ -4,12 +4,13 @@ import {
   Circle,
   CircleMarker,
   MapContainer,
+  Marker,
   Popup,
   TileLayer,
   useMap,
   useMapEvents,
 } from 'react-leaflet';
-import { latLngBounds, type LatLngExpression } from 'leaflet';
+import { divIcon, latLngBounds, type LatLngExpression } from 'leaflet';
 
 import { getCategoryColor } from '@/features/places/constants.ts';
 import type {
@@ -17,12 +18,16 @@ import type {
   PlacesOfWorshipResponse,
   UserLocation,
 } from '@/features/places/types.ts';
+import { getStampIdFromPlace } from '@/features/places/stampsStorage.ts';
 
 import styles from './MapView.module.css';
 
 interface MapViewProps {
   response: PlacesOfWorshipResponse | null;
   userLocation: UserLocation | null;
+  selectedId?: string;
+  stampedIds?: Set<string>;
+  onSelect?: (place: PlacesItem) => void;
   onCenterChange?: (coords: UserLocation) => void;
 }
 
@@ -76,6 +81,21 @@ function formatDistance(distanceMeters: number): string {
   return `${Math.round(distanceMeters)} m`;
 }
 
+function createStampedIcon(color: string, isSelected: boolean) {
+  const selectedClass = isSelected ? ` ${styles.poiMarkerSelected}` : '';
+  return divIcon({
+    className: styles.poiMarkerWrapper,
+    html: `
+      <div class="${styles.poiMarkerShell}${selectedClass}" style="--poi-color: ${color};">
+        <div class="${styles.poiMarkerStamped}"></div>
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -12],
+  });
+}
+
 const CenterTracker: FC<{
   onChange?: (coords: UserLocation) => void;
 }> = ({ onChange }) => {
@@ -103,6 +123,9 @@ const CenterTracker: FC<{
 export const MapView: FC<MapViewProps> = ({
   response,
   userLocation,
+  selectedId,
+  stampedIds,
+  onSelect,
   onCenterChange,
 }) => {
   const items = useMemo(() => response?.items ?? [], [response]);
@@ -172,24 +195,50 @@ export const MapView: FC<MapViewProps> = ({
 
           {items.map((item) => {
             const color = getCategoryColor(item.category.key, item.category.value);
+            const placeId = getStampIdFromPlace(item);
+            const isStamped = stampedIds?.has(placeId) ?? false;
+            const isSelected = selectedId === placeId;
+
+            const popupContent = (
+              <Popup>
+                <strong>{item.name}</strong>
+                <div>{item.category.label}</div>
+                <div>{formatDistance(item.distanceMeters)} away</div>
+                <a href={item.osmUrl} target="_blank" rel="noreferrer">OpenStreetMap</a>
+              </Popup>
+            );
+
+            if (isStamped) {
+              return (
+                <Marker
+                  key={item.osmUrl}
+                  position={[item.coordinates.latitude, item.coordinates.longitude]}
+                  icon={createStampedIcon(color, isSelected)}
+                  eventHandlers={{
+                    click: () => onSelect?.(item),
+                  }}
+                >
+                  {popupContent}
+                </Marker>
+              );
+            }
+
             return (
               <CircleMarker
                 key={item.osmUrl}
                 center={[item.coordinates.latitude, item.coordinates.longitude]}
-                radius={8}
+                radius={isSelected ? 10 : 8}
                 pathOptions={{
-                  color,
-                  weight: 2,
+                  color: isSelected ? '#0f172a' : color,
+                  weight: isSelected ? 3 : 2,
                   fillColor: color,
                   fillOpacity: 0.9,
                 }}
+                eventHandlers={{
+                  click: () => onSelect?.(item),
+                }}
               >
-                <Popup>
-                  <strong>{item.name}</strong>
-                  <div>{item.category.label}</div>
-                  <div>{formatDistance(item.distanceMeters)} away</div>
-                  <a href={item.osmUrl} target="_blank" rel="noreferrer">OpenStreetMap</a>
-                </Popup>
+                {popupContent}
               </CircleMarker>
             );
           })}

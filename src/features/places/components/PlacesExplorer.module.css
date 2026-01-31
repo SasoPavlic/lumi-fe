@@ -170,6 +170,185 @@
   height: 18px;
 }
 
+.checkInCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.checkInHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.checkInTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.checkInSubtitle {
+  font-size: 0.85rem;
+  color: var(--tgui--text-secondary, rgba(15, 23, 42, 0.7));
+}
+
+.stampCount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #1e1b4b;
+  min-width: 72px;
+}
+
+.stampCountValue {
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stampCountLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.checkInButton {
+  position: relative;
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 16px 18px;
+  background: #f8fafc;
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.checkInButtonLocked {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.checkInButtonReady {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 16px 30px rgba(34, 197, 94, 0.25);
+}
+
+.checkInButtonStamped {
+  background: linear-gradient(135deg, #0f766e, #22c55e);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.checkInButtonHolding {
+  transform: scale(0.99);
+}
+
+.checkInButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+  box-shadow: none;
+  transform: none;
+}
+
+.checkInButtonContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.checkInButtonTitle {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.checkInButtonSubtitle {
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.65);
+}
+
+.checkInButtonReady .checkInButtonSubtitle,
+.checkInButtonStamped .checkInButtonSubtitle {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.checkInIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkInIcon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.distanceMeter {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.distanceMeterFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6366f1, #14b8a6);
+  transition: width 0.2s ease;
+}
+
+.holdRing {
+  position: absolute;
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  transform: rotate(-90deg);
+}
+
+.holdRingActive {
+  opacity: 1;
+}
+
+.holdRingTrack {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 3;
+}
+
+.holdRingFill {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.1s linear;
+}
+
 .summaryHeader {
   font-weight: 600;
   margin: 0;
