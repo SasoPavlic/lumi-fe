@@ -38,6 +38,13 @@
   gap: 16px;
 }
 
+.sliderHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+}
+
 .sliderLabel {
   font-weight: 600;
   min-width: 90px;
@@ -49,7 +56,7 @@
 }
 
 .radiusValue {
-  min-width: 60px;
+  min-width: 48px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: inherit;
@@ -126,11 +133,29 @@
   color: inherit;
 }
 
-.mapSection,
-.summary {
+.mapSection {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.devCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px dashed rgba(15, 23, 42, 0.18);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.devTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--tgui--text-secondary, rgba(15, 23, 42, 0.7));
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .locationInfo {
@@ -349,35 +374,6 @@
   transition: stroke-dasharray 0.1s linear;
 }
 
-.summaryHeader {
-  font-weight: 600;
-  margin: 0;
-  font-size: 1rem;
-  color: inherit;
-}
-
-.categories {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.categoryItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
-  color: var(--tgui--text-secondary, rgba(15, 23, 42, 0.75));
-}
-
-.categoryDot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
 
 .jsonBlock {
   background: #0f172a;
@@ -413,6 +409,15 @@
   .sliderRow {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .sliderHeader {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .slider {
+    width: 100%;
   }
 
   .button {

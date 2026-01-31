@@ -1,5 +1,5 @@
-export const DEFAULT_RADIUS_KM = 10;
-export const MIN_RADIUS_KM = 0;
+export const DEFAULT_RADIUS_KM = 3;
+export const MIN_RADIUS_KM = 1;
 export const MAX_RADIUS_KM = 100;
 
 const CATEGORY_COLORS: Record<string, string> = {

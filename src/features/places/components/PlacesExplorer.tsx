@@ -11,7 +11,7 @@ import {
 import { hapticFeedbackNotificationOccurred } from '@telegram-apps/sdk';
 
 import { fetchClosestPoi, getApiBaseUrl } from '@/features/places/api.ts';
-import { DEFAULT_RADIUS_KM, MAX_RADIUS_KM, MIN_RADIUS_KM, getCategoryColor } from '@/features/places/constants.ts';
+import { DEFAULT_RADIUS_KM, MAX_RADIUS_KM, MIN_RADIUS_KM } from '@/features/places/constants.ts';
 import type { PlacesItem, PlacesOfWorshipResponse, UserLocation } from '@/features/places/types.ts';
 import {
   getStampIdFromPlace,
@@ -343,8 +343,6 @@ export const PlacesExplorer: FC = () => {
     setSelectedPlace(place);
   }, []);
 
-  const categories = result?.categories ?? [];
-
   let checkInButtonTitle = 'Select a place';
   let checkInButtonSubtitle = 'Tap a marker on the map';
   let checkInButtonClass = styles.checkInButtonLocked;
@@ -376,16 +374,11 @@ export const PlacesExplorer: FC = () => {
 
   return (
     <section className={styles.card}>
-      <div className={styles.header}>
-        <h3 className={styles.title}>Places of Worship Explorer</h3>
-        <p className={styles.subtitle}>
-          Query the Lumigram backend for nearby churches, chapels, and shrines powered by
-          OpenStreetMap data.
-        </p>
-      </div>
-
       <div className={styles.sliderRow}>
-        <span className={styles.sliderLabel}>Radius</span>
+        <div className={styles.sliderHeader}>
+          <span className={styles.sliderLabel}>Radius</span>
+          <span className={styles.radiusValue}>{radiusKm} km</span>
+        </div>
         <input
           type="range"
           min={MIN_RADIUS_KM}
@@ -399,7 +392,6 @@ export const PlacesExplorer: FC = () => {
           aria-valuenow={radiusKm}
           aria-label="Search radius in kilometers"
         />
-        <span className={styles.radiusValue}>{radiusKm} km</span>
       </div>
 
       <button
@@ -419,11 +411,6 @@ export const PlacesExplorer: FC = () => {
       >
         {status.text}
       </div>
-      <p className={styles.apiInfo}>
-        <span className={styles.apiInfoLabel}>API target:</span>
-        <span className={styles.apiInfoValue}>{apiBaseUrl}</span>
-      </p>
-
       <div className={styles.mapSection}>
         <MapView
           response={result}
@@ -433,25 +420,6 @@ export const PlacesExplorer: FC = () => {
           onSelect={handleSelectPlace}
           onCenterChange={updateMapCenter}
         />
-        <div className={styles.locationInfo}>
-          <div>
-            <div className={styles.locationLabel}>Map center</div>
-            <div className={styles.locationValue}>
-              {mapCenter
-                ? `Lat ${mapCenter.lat.toFixed(5)}, Lon ${mapCenter.lon.toFixed(5)}`
-                : 'Pan the map to pick a point'}
-            </div>
-          </div>
-          <label className={styles.locationToggle}>
-            <input
-              type="checkbox"
-              checked={useMapCenter}
-              onChange={(event) => setUseMapCenter(event.target.checked)}
-              disabled={!mapCenter}
-            />
-            <span>Use map center instead of GPS</span>
-          </label>
-        </div>
       </div>
 
       <div className={styles.checkInCard}>
@@ -537,34 +505,40 @@ export const PlacesExplorer: FC = () => {
         </button>
       </div>
 
-      {result && (
-        <div className={styles.summary}>
-          <p className={styles.summaryHeader}>
-            {result.count} places within {(result.radiusMeters / 1000).toFixed(1)} km
-          </p>
-          <ul className={styles.categories}>
-            {categories.map((category) => (
-              <li key={`${category.key}:${category.value}`} className={styles.categoryItem}>
-                <span
-                  className={styles.categoryDot}
-                  style={{ backgroundColor: getCategoryColor(category.key, category.value) }}
-                />
-                <span>{category.label}</span>
-                <span>• {category.count}</span>
-              </li>
-            ))}
-          </ul>
+      <section className={styles.devCard}>
+        <h4 className={styles.devTitle}>Developer tools</h4>
+        <p className={styles.apiInfo}>
+          <span className={styles.apiInfoLabel}>API target:</span>
+          <span className={styles.apiInfoValue}>{apiBaseUrl}</span>
+        </p>
+        <div className={styles.locationInfo}>
+          <div>
+            <div className={styles.locationLabel}>Map center</div>
+            <div className={styles.locationValue}>
+              {mapCenter
+                ? `Lat ${mapCenter.lat.toFixed(5)}, Lon ${mapCenter.lon.toFixed(5)}`
+                : 'Pan the map to pick a point'}
+            </div>
+          </div>
+          <label className={styles.locationToggle}>
+            <input
+              type="checkbox"
+              checked={useMapCenter}
+              onChange={(event) => setUseMapCenter(event.target.checked)}
+              disabled={!mapCenter}
+            />
+            <span>Use map center instead of GPS</span>
+          </label>
         </div>
-      )}
-
-      {result && (
-        <details className={styles.jsonBlock} open>
-          <summary>API response payload</summary>
-          <pre className={styles.json}>
-            {JSON.stringify(result, null, 2)}
-          </pre>
-        </details>
-      )}
+        {result && (
+          <details className={styles.jsonBlock} open>
+            <summary>API response payload</summary>
+            <pre className={styles.json}>
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </details>
+        )}
+      </section>
     </section>
   );
 };

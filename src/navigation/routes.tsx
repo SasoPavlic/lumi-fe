@@ -2,6 +2,7 @@ import type { ComponentType, JSX } from 'react';
 
 import { IndexPage } from '@/pages/IndexPage/IndexPage';
 import { TONConnectPage } from '@/pages/TONConnectPage/TONConnectPage';
+import { ProfilePage } from '@/pages/ProfilePage/ProfilePage';
 
 interface Route {
   path: string;
@@ -12,6 +13,7 @@ interface Route {
 
 export const routes: Route[] = [
   { path: '/', Component: IndexPage },
+  { path: '/profile', Component: ProfilePage },
   {
     path: '/ton-connect',
     Component: TONConnectPage,

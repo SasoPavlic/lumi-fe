@@ -1,0 +1,9 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shellWithNav {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
