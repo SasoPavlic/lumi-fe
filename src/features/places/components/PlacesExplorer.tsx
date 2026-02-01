@@ -1,5 +1,6 @@
 import {
   type ChangeEvent,
+  type CSSProperties,
   type FC,
   useCallback,
   useEffect,
@@ -469,6 +470,10 @@ export const PlacesExplorer: FC = () => {
             isHolding ? styles.checkInButtonHolding : '',
           ].join(' ')}
           disabled={!canStamp}
+          style={{
+            '--hold-progress': holdProgress,
+            '--hold-active': (isHolding || holdProgress > 0) ? 1 : 0,
+          } as CSSProperties}
           onPointerDown={(event) => {
             event.preventDefault();
             startHold();
@@ -477,30 +482,6 @@ export const PlacesExplorer: FC = () => {
           onPointerLeave={() => cancelHold(true)}
           onPointerCancel={() => cancelHold(true)}
         >
-          <svg
-            className={[
-              styles.holdRing,
-              isHolding ? styles.holdRingActive : '',
-            ].join(' ')}
-            viewBox="0 0 36 36"
-          >
-            <circle
-              className={styles.holdRingTrack}
-              cx="18"
-              cy="18"
-              r="16"
-              pathLength="100"
-            />
-            <circle
-              className={styles.holdRingFill}
-              cx="18"
-              cy="18"
-              r="16"
-              pathLength="100"
-              strokeDasharray={`${holdProgress * 100} 100`}
-            />
-          </svg>
-
           <div className={styles.checkInButtonContent}>
             <div>
               <div className={styles.checkInButtonTitle}>{checkInButtonTitle}</div>
